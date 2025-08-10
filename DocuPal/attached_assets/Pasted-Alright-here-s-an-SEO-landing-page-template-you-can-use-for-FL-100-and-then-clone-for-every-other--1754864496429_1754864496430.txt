@@ -1,0 +1,117 @@
+Alright — here’s an SEO landing page template you can use for FL-100 and then clone for every other California court form in your dropdown.
+
+If you follow this exactly, it’ll hit the main search terms and naturally funnel visitors into using your tool.
+
+SEO Landing Page Template — FL-100 Petition
+(Replace FL-100 references with any other form name for future pages.)
+
+📌 URL:
+
+bash
+Copy
+Edit
+/california-fl-100-petition
+📌 Page Title (for Google):
+
+Copy
+Edit
+FL-100 California Petition — Fill Online & Download Instantly
+📌 Meta Description:
+
+arduino
+Copy
+Edit
+Complete your California FL-100 Petition for Dissolution or Legal Separation online in minutes. No lawyer needed. Fill, download, and print instantly.
+Page Content (H1–H4, body text)
+
+H1:
+
+css
+Copy
+Edit
+FL-100 California Petition — Divorce & Legal Separation Form
+Intro paragraph: (50–80 words)
+
+The FL-100 Petition is the California court form you need to start a divorce, legal separation, or annulment. This page explains what the FL-100 is, when you need it, and how you can complete it online quickly. At the bottom, you can fill it in instantly using our secure form-filler tool — no legal experience required.
+
+H2: What is the FL-100 Form?
+
+The FL-100 Petition is issued by the Judicial Council of California. It begins the legal process for:
+
+Dissolution of Marriage (Divorce)
+
+Legal Separation
+
+Nullity (Annulment) of Marriage or Domestic Partnership
+
+This form includes information about you, your spouse, your marriage, and what you’re requesting from the court.
+
+H2: When to Use FL-100
+
+You’ll need to file FL-100 if:
+
+You’ve lived in California for at least 6 months (and your county for 3 months).
+
+You’re starting a divorce or legal separation in California.
+
+You want to request orders on property division, custody, or spousal support.
+
+H2: How to Fill FL-100 in California
+H3: Step 1 — Gather Your Information
+
+You’ll need:
+
+Full legal names, addresses, and dates of birth.
+
+Marriage date and location.
+
+Grounds for divorce or separation.
+
+Details on minor children (if applicable).
+
+H3: Step 2 — Complete the Form
+
+Normally, you can print and handwrite FL-100 or type into a PDF.
+With our online form-filler, you answer simple questions, and the system fills in FL-100 automatically.
+
+H3: Step 3 — File With the Court
+
+Print, sign, and file the completed form at your county Superior Court.
+
+H2: Fill Out FL-100 Instantly Online
+
+Use our secure online tool below. It:
+
+Walks you through each question in plain English.
+
+Auto-fills the official FL-100 PDF.
+
+Lets you download a ready-to-file copy instantly.
+
+[Button] Start Filling FL-100 Now → (link to your form-filler tool)
+
+H2: Common Questions About FL-100
+H3: Do I need a lawyer to file FL-100?
+
+No, you can file it yourself. Our tool helps you prepare it without legal advice.
+
+H3: How much is the filing fee?
+
+Filing fees vary by county but are typically around $435.
+
+H3: Where do I file FL-100?
+
+At the Superior Court in the county where you or your spouse lives.
+
+Footer Section: (small font)
+
+Disclaimer: This site is not a law firm and does not provide legal advice. We provide self-help document preparation software.
+
+Why this works for SEO:
+Exact form name in H1, title, meta, URL.
+
+Explains what it is, when to use, how to complete — Google sees this as relevant & authoritative.
+
+Internal link from this page to the tool makes conversions seamless.
+
+Can be cloned for FL-200, DE-111, SC-100, etc. with only small edits.
