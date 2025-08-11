@@ -1,4 +1,9 @@
 [build]
-  base = "DocuPal"
-  command = "npm run build"
+  base = "DocuPal"          # watch the capital P
+  command = "npm ci && npm run build"
   publish = "dist/public"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
