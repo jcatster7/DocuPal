@@ -71,7 +71,7 @@ export const MOCK_FORMS: PetitionForm[] = [
     id: "cr-180",
     code: "CR-180",
     name: "Petition for Dismissal (Expungement)",
-    category: "criminal",
+    category: "civil",
     description: "This form is used to request dismissal of a criminal conviction.",
     estimatedTime: "15-25 minutes",
     requiredDocuments: ["ID", "Case Information", "Probation Records"],

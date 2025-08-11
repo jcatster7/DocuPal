@@ -1,8 +1,6 @@
 import { useState, useRef } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface UploadedFile {
@@ -10,6 +8,7 @@ interface UploadedFile {
   size: string;
   category: string;
   extractedText?: string;
+  id: string;
 }
 
 interface DocumentUploadProps {
@@ -28,41 +27,62 @@ export default function DocumentUpload({
   language 
 }: DocumentUploadProps) {
   const [dragOver, setDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const uploadMutation = useMutation({
-    mutationFn: async (files: FileList) => {
-      const formData = new FormData();
-      Array.from(files).forEach(file => {
-        formData.append("documents", file);
-      });
+  // Mock upload function that simulates file processing
+  const mockUpload = async (files: FileList): Promise<UploadedFile[]> => {
+    setIsUploading(true);
+    
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const newFiles: UploadedFile[] = Array.from(files).map((file, index) => {
+      // Determine category based on file name or type
+      let category = "general";
+      const fileName = file.name.toLowerCase();
       
-      const response = await apiRequest("POST", "/api/uploads", formData);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      const newFiles = data.files.map((file: any) => ({
+      if (fileName.includes("id") || fileName.includes("license") || fileName.includes("passport")) {
+        category = "identity";
+      } else if (fileName.includes("marriage") || fileName.includes("birth") || fileName.includes("court")) {
+        category = "legal";
+      } else if (fileName.includes("pay") || fileName.includes("tax") || fileName.includes("bank")) {
+        category = "financial";
+      } else if (fileName.includes("deed") || fileName.includes("lease") || fileName.includes("vehicle")) {
+        category = "property";
+      }
+      
+      return {
+        id: `file-${Date.now()}-${index}`,
         name: file.name,
-        size: formatFileSize(parseInt(file.size) || 0),
-        category: file.category || "general",
-        extractedText: file.extractedText || "",
-      }));
-      
+        size: formatFileSize(file.size),
+        category,
+        extractedText: `Mock extracted text from ${file.name}`,
+      };
+    });
+    
+    setIsUploading(false);
+    return newFiles;
+  };
+
+  const handleUpload = async (files: FileList) => {
+    try {
+      const newFiles = await mockUpload(files);
       onFilesUpdate([...uploadedFiles, ...newFiles]);
+      
       toast({
         title: language === "es" ? "Documentos cargados" : "Documents uploaded",
         description: language === "es" ? "Sus documentos han sido procesados exitosamente" : "Your documents have been processed successfully",
       });
-    },
-    onError: () => {
+    } catch (error) {
       toast({
         title: language === "es" ? "Error de carga" : "Upload error",
         description: language === "es" ? "Falló la carga de documentos" : "Failed to upload documents",
         variant: "destructive",
       });
     }
-  });
+  };
 
   const translations = {
     en: {
@@ -82,6 +102,8 @@ export default function DocumentUpload({
       processed: "Processed",
       backButton: "Back to Form Selection",
       continueButton: "Continue to Form Questions",
+      uploading: "Uploading...",
+      mockNotice: "Demo Mode - Files are processed locally",
     },
     es: {
       title: "Cargar Documentos de Apoyo",
@@ -100,6 +122,8 @@ export default function DocumentUpload({
       processed: "Procesado",
       backButton: "Volver a Selección de Formulario",
       continueButton: "Continuar a Preguntas del Formulario",
+      uploading: "Subiendo...",
+      mockNotice: "Modo Demo - Los archivos se procesan localmente",
     }
   };
 
@@ -120,14 +144,14 @@ export default function DocumentUpload({
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      uploadMutation.mutate(files);
+      handleUpload(files);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      uploadMutation.mutate(files);
+      handleUpload(files);
     }
     // Reset input
     e.target.value = "";
@@ -178,6 +202,14 @@ export default function DocumentUpload({
       <CardContent className="p-6">
         <h2 className="text-lg font-semibold legal-gray mb-4">{t.title}</h2>
         
+        {/* Demo Mode Notice */}
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-sm text-blue-700">
+            <i className="fas fa-info-circle mr-2"></i>
+            {t.mockNotice}
+          </p>
+        </div>
+        
         {/* Upload Area */}
         <div 
           className={`border-2 border-dashed rounded-lg p-8 text-center mb-4 transition-colors cursor-pointer ${
@@ -193,12 +225,12 @@ export default function DocumentUpload({
           <p className="text-sm text-gray-500 mb-4">{t.supportedFormats}</p>
           <Button 
             className="bg-legal-blue text-white hover:bg-opacity-90"
-            disabled={uploadMutation.isPending}
+            disabled={isUploading}
           >
-            {uploadMutation.isPending ? (
+            {isUploading ? (
               <>
                 <i className="fas fa-spinner fa-spin mr-2"></i>
-                {language === "es" ? "Cargando..." : "Uploading..."}
+                {t.uploading}
               </>
             ) : (
               <>
@@ -240,7 +272,7 @@ export default function DocumentUpload({
             <h3 className="font-medium legal-gray mb-3">{t.uploadedTitle}</h3>
             <div className="space-y-2">
               {uploadedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                <div key={file.id} className="flex items-center justify-between bg-gray-50 p-3 rounded">
                   <div className="flex items-center space-x-3">
                     <i className="fas fa-file-pdf legal-red"></i>
                     <div>
