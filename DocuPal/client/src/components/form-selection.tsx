@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import type { PetitionForm } from "@shared/schema";
+import { MOCK_FORMS } from "@/data/mock-forms";
 
 // Custom hook for debounced search
 function useDebounce<T>(value: T, delay: number): T {
@@ -38,7 +39,7 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
   // Debounce search term to avoid excessive filtering
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const { data: forms, isLoading, error } = useQuery<PetitionForm[]>({
+  const { data: apiForms, isLoading, error } = useQuery<PetitionForm[]>({
     queryKey: ["/api/petition-forms"],
     queryFn: async () => {
       try {
@@ -62,6 +63,10 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
     retry: 2,
     retryDelay: 1000,
   });
+
+  // Use mock data if API fails, otherwise use API data
+  const forms = apiForms || MOCK_FORMS;
+  const isUsingMockData = !apiForms && error;
 
   // Memoized categories to prevent unnecessary re-renders
   const categories = useMemo(() => [
@@ -165,6 +170,7 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
       continueButton: "Continue to Document Upload",
       noResults: "No forms match",
       suggestions: "Try searching for:",
+      mockDataNotice: "Using demo data - forms will work offline",
     },
     es: {
       title: "Seleccione Su Formulario de Petición Legal",
@@ -177,6 +183,7 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
       continueButton: "Continuar a Cargar Documentos",
       noResults: "No hay formularios que coincidan con",
       suggestions: "Intente buscar:",
+      mockDataNotice: "Usando datos de demostración - formularios funcionan sin conexión",
     }
   };
 
@@ -197,29 +204,20 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
     );
   }
 
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center text-red-600">
-            <p>Error loading forms. Please try again.</p>
-            <Button 
-              onClick={() => window.location.reload()} 
-              className="mt-4"
-              variant="outline"
-            >
-              Retry
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardContent className="p-6">
         <h2 className="text-lg font-semibold legal-gray mb-4">{t.title}</h2>
+        
+        {/* Mock Data Notice */}
+        {isUsingMockData && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-700">
+              <i className="fas fa-info-circle mr-2"></i>
+              {t.mockDataNotice}
+            </p>
+          </div>
+        )}
         
         {/* Category Filter */}
         <div className="mb-4">

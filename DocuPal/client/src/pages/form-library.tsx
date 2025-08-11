@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import FormPicker from "@/components/form-picker";
 import type { PetitionForm } from "@shared/schema";
+import { MOCK_FORMS } from "@/data/mock-forms";
 
 // Custom hook for debounced search
 function useDebounce<T>(value: T, delay: number): T {
@@ -40,10 +41,14 @@ export default function FormLibrary() {
     }
   }, []);
 
-  const { data: forms, isLoading, error } = useQuery<PetitionForm[]>({
+  const { data: apiForms, isLoading, error } = useQuery<PetitionForm[]>({
     queryKey: ["/api/petition-forms"],
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
+
+  // Use mock data if API fails, otherwise use API data
+  const forms = apiForms || MOCK_FORMS;
+  const isUsingMockData = !apiForms && error;
 
   // Memoized categories to prevent unnecessary re-renders
   const categories = useMemo(() => [
@@ -127,23 +132,6 @@ export default function FormLibrary() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center text-red-600">
-          <p>Error loading forms. Please try again.</p>
-          <Button 
-            onClick={() => window.location.reload()} 
-            className="mt-4"
-            variant="outline"
-          >
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -153,6 +141,16 @@ export default function FormLibrary() {
         <p className="text-lg text-legal-gray">
           Browse and select from our comprehensive collection of California Judicial Council forms
         </p>
+        
+        {/* Mock Data Notice */}
+        {isUsingMockData && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-700">
+              <i className="fas fa-info-circle mr-2"></i>
+              Using demo data - forms will work offline
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Search and Filter Section */}
