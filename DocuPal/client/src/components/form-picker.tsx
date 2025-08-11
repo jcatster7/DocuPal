@@ -1,15 +1,20 @@
 import { useMemo, useState } from 'react';
-import { COURT_FORMS } from '@/data/forms';
-import { formMatches } from '@/lib/search';
+import { formMatches, norm } from '@/lib/search';
 
-export default function FormPicker({ onSelect }: { onSelect: (code: string) => void }) {
+export default function FormPicker({
+  forms,
+  onSelect
+}: {
+  forms: { code: string; title?: string; name?: string }[];
+  onSelect: (code: string) => void;
+}) {
   const [q, setQ] = useState('');
 
   const results = useMemo(() => {
     const n = q.trim();
     if (!n) return [];
-    return COURT_FORMS
-      .filter(f => formMatches(n, f.code, f.title))
+    return forms
+      .filter(f => formMatches(n, f.code, f.title || f.name || ''))
       .sort((a, b) => {
         // prioritize code prefix matches (e.g., "FL", "FL1")
         const aCode = +norm(a.code).startsWith(norm(n));
@@ -17,7 +22,7 @@ export default function FormPicker({ onSelect }: { onSelect: (code: string) => v
         return bCode - aCode || a.code.localeCompare(b.code);
       })
       .slice(0, 10);
-  }, [q]);
+  }, [q, forms]);
 
   const handleEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && results.length) {
@@ -44,7 +49,7 @@ export default function FormPicker({ onSelect }: { onSelect: (code: string) => v
               onClick={() => onSelect(f.code)}
             >
               <span className="font-medium">{f.code}</span>
-              <span className="text-gray-600">{f.title}</span>
+              <span className="text-gray-600">{f.title || f.name}</span>
             </button>
           )) : (
             <div className="px-4 py-3 text-gray-500">No forms match “{q}”</div>
