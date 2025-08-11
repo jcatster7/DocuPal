@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import type { PetitionForm } from "@shared/schema";
+
+// Custom hook for debounced search
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 interface FormSelectionProps {
   selectedForm: PetitionForm | null;
@@ -17,10 +34,74 @@ interface FormSelectionProps {
 export default function FormSelection({ selectedForm, onFormSelect, onNext, language }: FormSelectionProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  
+  // Debounce search term to avoid excessive filtering
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const { data: forms, isLoading } = useQuery<PetitionForm[]>({
+  const { data: forms, isLoading, error } = useQuery<PetitionForm[]>({
     queryKey: ["/api/petition-forms"],
+    queryFn: async () => {
+      const response = await fetch("/api/petition-forms");
+      if (!response.ok) {
+        throw new Error("Failed to fetch forms");
+      }
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
+
+  // Memoized categories to prevent unnecessary re-renders
+  const categories = useMemo(() => [
+    { id: "all", name: language === "es" ? "Todos los Formularios" : "All Forms" },
+    { id: "family", name: language === "es" ? "Derecho Familiar" : "Family Law" },
+    { id: "probate", name: language === "es" ? "Testamentos" : "Probate" },
+    { id: "civil", name: language === "es" ? "Civil" : "Civil" },
+    { id: "criminal", name: language === "es" ? "Criminal" : "Criminal" },
+  ], [language]);
+
+  // Memoized filtered forms with optimized search logic
+  const filteredForms = useMemo(() => {
+    if (!forms) return [];
+    
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    const hasSearchTerm = searchLower.length > 0;
+    
+    return forms.filter(form => {
+      // Early return if no search term and category matches
+      if (!hasSearchTerm) {
+        return categoryFilter === "all" || form.category === categoryFilter;
+      }
+      
+      // Optimized search: check code first (most specific), then name, then description
+      const matchesSearch = 
+        form.code.toLowerCase().includes(searchLower) ||
+        form.name.toLowerCase().includes(searchLower) ||
+        form.description.toLowerCase().includes(searchLower);
+      
+      const matchesCategory = categoryFilter === "all" || form.category === categoryFilter;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [forms, debouncedSearchTerm, categoryFilter]);
+
+  // Memoized search suggestions for better UX
+  const searchSuggestions = useMemo(() => {
+    if (!forms || debouncedSearchTerm.length < 2) return [];
+    
+    const suggestions = new Set<string>();
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    
+    forms.forEach(form => {
+      if (form.code.toLowerCase().includes(searchLower)) {
+        suggestions.add(form.code);
+      }
+      if (form.name.toLowerCase().includes(searchLower)) {
+        suggestions.add(form.name);
+      }
+    });
+    
+    return Array.from(suggestions).slice(0, 5);
+  }, [forms, debouncedSearchTerm]);
 
   // Auto-select form from URL parameter
   useEffect(() => {
@@ -34,45 +115,45 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
     }
   }, [forms, selectedForm, onFormSelect]);
 
-  const categories = [
-    { id: "all", name: language === "es" ? "Todos los Formularios" : "All Forms" },
-    { id: "family", name: language === "es" ? "Derecho Familiar" : "Family Law" },
-    { id: "probate", name: language === "es" ? "Testamentos" : "Probate" },
-    { id: "civil", name: language === "es" ? "Civil" : "Civil" },
-    { id: "criminal", name: language === "es" ? "Criminal" : "Criminal" },
-  ];
+  // Optimized form selection handler
+  const handleFormSelect = useCallback((form: PetitionForm) => {
+    onFormSelect(form);
+    setSearchTerm(""); // Clear search after selection
+  }, [onFormSelect]);
 
-  const filteredForms = forms?.filter(form => {
-    const matchesSearch = !searchTerm || 
-      form.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      form.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      form.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategory = categoryFilter === "all" || form.category === categoryFilter;
-    
-    return matchesSearch && matchesCategory;
-  }) || [];
+  // Optimized category filter handler
+  const handleCategoryFilter = useCallback((categoryId: string) => {
+    setCategoryFilter(categoryId);
+    // Clear search when changing categories for better UX
+    if (searchTerm) {
+      setSearchTerm("");
+    }
+  }, [searchTerm]);
 
   const translations = {
     en: {
       title: "Select Your Legal Petition Form",
       filterLabel: "Filter by Category:",
       selectLabel: "Search and Select Your Petition Form:",
-      selectPlaceholder: "Start typing to search forms (e.g., F for FL-100, divorce, probate)...",
+      selectPlaceholder: "Start typing to search forms (e.g., FL-100, divorce, probate)...",
       selectedTitle: "Selected Form Information",
       estimatedTime: "Est. completion:",
       requiredDocs: "Required documents:",
       continueButton: "Continue to Document Upload",
+      noResults: "No forms match",
+      suggestions: "Try searching for:",
     },
     es: {
       title: "Seleccione Su Formulario de Petición Legal",
       filterLabel: "Filtrar por Categoría:",
       selectLabel: "Busque y Seleccione Su Formulario de Petición:",
-      selectPlaceholder: "Comience a escribir para buscar formularios (ej. F para FL-100, divorcio, testamentos)...",
+      selectPlaceholder: "Comience a escribir para buscar formularios (ej. FL-100, divorcio, testamentos)...",
       selectedTitle: "Información del Formulario Seleccionado",
       estimatedTime: "Tiempo estimado:",
       requiredDocs: "Documentos requeridos:",
       continueButton: "Continuar a Cargar Documentos",
+      noResults: "No hay formularios que coincidan con",
+      suggestions: "Intente buscar:",
     }
   };
 
@@ -93,6 +174,25 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
     );
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-red-600">
+            <p>Error loading forms. Please try again.</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="mt-4"
+              variant="outline"
+            >
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardContent className="p-6">
@@ -107,7 +207,7 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
                 key={category.id}
                 variant={categoryFilter === category.id ? "default" : "outline"}
                 size="sm"
-                onClick={() => setCategoryFilter(category.id)}
+                onClick={() => handleCategoryFilter(category.id)}
                 className={categoryFilter === category.id ? "bg-legal-blue" : ""}
               >
                 {category.name}
@@ -134,31 +234,45 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
             <i className="fas fa-chevron-down absolute right-3 top-3 text-gray-400"></i>
             
             {/* Autocomplete dropdown */}
-            {searchTerm && !selectedForm && (
+            {debouncedSearchTerm && !selectedForm && (
               <div className="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
-                {filteredForms.slice(0, 8).map(form => (
-                  <button
-                    key={form.code}
-                    className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 focus:outline-none focus:bg-blue-50"
-                    onClick={() => {
-                      onFormSelect(form);
-                      setSearchTerm("");
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-medium legal-blue">{form.code}</span>
-                        <span className="text-sm legal-gray ml-2">{form.name}</span>
+                {filteredForms.length > 0 ? (
+                  filteredForms.slice(0, 8).map(form => (
+                    <button
+                      key={form.code}
+                      className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 focus:outline-none focus:bg-blue-50"
+                      onClick={() => handleFormSelect(form)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-medium legal-blue">{form.code}</span>
+                          <span className="text-sm legal-gray ml-2">{form.name}</span>
+                        </div>
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                          {categories.find(c => c.id === form.category)?.name}
+                        </span>
                       </div>
-                      <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                        {categories.find(c => c.id === form.category)?.name}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-                {filteredForms.length === 0 && (
+                    </button>
+                  ))
+                ) : (
                   <div className="px-4 py-3 text-gray-500 text-center">
-                    No forms match "{searchTerm}"
+                    <p>{t.noResults} "{debouncedSearchTerm}"</p>
+                    {searchSuggestions.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-400">{t.suggestions}</p>
+                        <div className="flex flex-wrap gap-1 mt-1 justify-center">
+                          {searchSuggestions.map((suggestion, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSearchTerm(suggestion)}
+                              className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

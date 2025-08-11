@@ -1,104 +1,163 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import FormPicker from "@/components/form-picker"; // ✅ NEW IMPORT
+import FormPicker from "@/components/form-picker";
 import type { PetitionForm } from "@shared/schema";
+
+// Custom hook for debounced search
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export default function FormLibrary() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  
+  // Debounce search term to avoid excessive filtering
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const { data: forms, isLoading } = useQuery<PetitionForm[]>({
+  const { data: forms, isLoading, error } = useQuery<PetitionForm[]>({
     queryKey: ["/api/petition-forms"],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  const categories = [
+  // Memoized categories to prevent unnecessary re-renders
+  const categories = useMemo(() => [
     { id: "all", name: "All Forms", color: "bg-legal-blue" },
     { id: "family", name: "Family Law", color: "bg-legal-green" },
     { id: "probate", name: "Probate", color: "bg-legal-purple" },
     { id: "civil", name: "Civil", color: "bg-legal-gray" },
     { id: "criminal", name: "Criminal", color: "bg-legal-red" },
-  ];
+  ], []);
 
-  const filteredForms = forms?.filter(form => {
-    const matchesSearch = !searchTerm || 
-      form.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      form.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      form.description.toLowerCase().includes(searchTerm.toLowerCase());
+  // Memoized filtered forms with optimized search logic
+  const filteredForms = useMemo(() => {
+    if (!forms) return [];
     
-    const matchesCategory = selectedCategory === "all" || form.category === selectedCategory;
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    const hasSearchTerm = searchLower.length > 0;
     
-    return matchesSearch && matchesCategory;
-  }) || [];
+    return forms.filter(form => {
+      // Early return if no search term and category matches
+      if (!hasSearchTerm) {
+        return selectedCategory === "all" || form.category === selectedCategory;
+      }
+      
+      // Optimized search: check code first (most specific), then name, then description
+      const matchesSearch = 
+        form.code.toLowerCase().includes(searchLower) ||
+        form.name.toLowerCase().includes(searchLower) ||
+        form.description.toLowerCase().includes(searchLower);
+      
+      const matchesCategory = selectedCategory === "all" || form.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [forms, debouncedSearchTerm, selectedCategory]);
+
+  // Memoized search suggestions for better UX
+  const searchSuggestions = useMemo(() => {
+    if (!forms || debouncedSearchTerm.length < 2) return [];
+    
+    const suggestions = new Set<string>();
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    
+    forms.forEach(form => {
+      if (form.code.toLowerCase().includes(searchLower)) {
+        suggestions.add(form.code);
+      }
+      if (form.name.toLowerCase().includes(searchLower)) {
+        suggestions.add(form.name);
+      }
+    });
+    
+    return Array.from(suggestions).slice(0, 5);
+  }, [forms, debouncedSearchTerm]);
+
+  // Optimized category filter handler
+  const handleCategoryFilter = useCallback((categoryId: string) => {
+    setSelectedCategory(categoryId);
+    // Clear search when changing categories for better UX
+    if (searchTerm) {
+      setSearchTerm("");
+    }
+  }, [searchTerm]);
+
+  // Optimized search handler
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-legal-light">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-300 rounded w-1/4 mx-auto mb-4"></div>
-              <div className="h-4 bg-gray-300 rounded w-1/2 mx-auto mb-8"></div>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="bg-white rounded-lg border p-6">
-                    <div className="h-6 bg-gray-300 rounded mb-3"></div>
-                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
-                    <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-gray-300 rounded w-1/3"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-48 bg-gray-300 rounded"></div>
+            ))}
           </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-legal-light">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <i className="fas fa-book text-2xl legal-blue"></i>
-              <h1 className="text-xl font-semibold legal-gray">California Legal Forms Library</h1>
-            </div>
-            <Link href="/">
-              <Button variant="outline" size="sm">
-                <i className="fas fa-arrow-left mr-2"></i>
-                Back to Form Filler
-              </Button>
-            </Link>
-          </div>
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center text-red-600">
+          <p>Error loading forms. Please try again.</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="mt-4"
+            variant="outline"
+          >
+            Retry
+          </Button>
         </div>
-      </header>
+      </div>
+    );
+  }
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Search and Filter */}
-        <div className="mb-8">
-          <div className="mb-4">
-            <div className="relative">
-              {/* ✅ Replaced <Input> with FormPicker */}
-              <FormPicker onSelect={(code) => setSearchTerm(code)} />
-              <i className="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-            </div>
-          </div>
-          
-          {/* Category Filter */}
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-legal-gray mb-4">
+          California Legal Forms Library
+        </h1>
+        <p className="text-lg text-legal-gray">
+          Browse and select from our comprehensive collection of California Judicial Council forms
+        </p>
+      </div>
+
+      {/* Search and Filter Section */}
+      <div className="mb-8 space-y-4">
+        {/* Category Filter */}
+        <div>
+          <label className="block text-sm font-medium legal-gray mb-2">Filter by Category:</label>
           <div className="flex flex-wrap gap-2">
             {categories.map(category => (
               <Button
                 key={category.id}
                 variant={selectedCategory === category.id ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedCategory(category.id)}
+                onClick={() => handleCategoryFilter(category.id)}
                 className={selectedCategory === category.id ? category.color : ""}
               >
                 {category.name}
@@ -107,74 +166,129 @@ export default function FormLibrary() {
           </div>
         </div>
 
-        {/* Forms Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Search Bar */}
+        <div>
+          <label className="block text-sm font-medium legal-gray mb-2">Search Forms:</label>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search by form code, name, or description..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-legal-blue focus:border-transparent"
+            />
+            <i className="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+          </div>
+          
+          {/* Search Suggestions */}
+          {searchSuggestions.length > 0 && debouncedSearchTerm && (
+            <div className="mt-2 p-3 bg-blue-50 rounded-md">
+              <p className="text-sm text-gray-600 mb-2">Try searching for:</p>
+              <div className="flex flex-wrap gap-2">
+                {searchSuggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSearchTerm(suggestion)}
+                    className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Results Count */}
+      <div className="mb-6">
+        <p className="text-legal-gray">
+          {filteredForms.length === 0 
+            ? "No forms found" 
+            : `Showing ${filteredForms.length} of ${forms?.length || 0} forms`
+          }
+        </p>
+      </div>
+
+      {/* Forms Grid */}
+      {filteredForms.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredForms.map(form => (
-            <Card key={form.id} className="hover:shadow-md transition-shadow">
+            <Card key={form.code} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge 
-                      variant="outline" 
-                      className={`${getCategoryColor(form.category)} text-white`}
-                    >
-                      {form.category.charAt(0).toUpperCase() + form.category.slice(1)}
-                    </Badge>
-                    <span className="text-sm font-mono legal-gray">{form.code}</span>
-                  </div>
-                  <h3 className="font-semibold legal-gray mb-2">{form.name}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{form.description}</p>
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-legal-blue">{form.code}</h3>
+                  <Badge 
+                    variant="secondary" 
+                    className={categories.find(c => c.id === form.category)?.color}
+                  >
+                    {categories.find(c => c.id === form.category)?.name}
+                  </Badge>
                 </div>
                 
-                <div className="space-y-2 text-xs text-gray-500 mb-4">
-                  <div className="flex items-center">
-                    <i className="fas fa-clock mr-2 w-4"></i>
-                    Est. time: {form.estimatedTime || "15-30 minutes"}
+                <h4 className="text-md font-medium text-legal-gray mb-2">{form.name}</h4>
+                <p className="text-sm text-legal-gray mb-4 line-clamp-3">{form.description}</p>
+                
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center text-sm text-legal-gray">
+                    <i className="fas fa-clock mr-2"></i>
+                    <span>Est. completion: {form.estimatedTime}</span>
                   </div>
-                  <div className="flex items-center">
-                    <i className="fas fa-file mr-2 w-4"></i>
-                    Required docs: {form.requiredDocuments?.join(", ") || "Varies"}
-                  </div>
+                  {form.requiredDocuments && form.requiredDocuments.length > 0 && (
+                    <div className="flex items-start text-sm text-legal-gray">
+                      <i className="fas fa-file mr-2 mt-0.5"></i>
+                      <span>Required: {form.requiredDocuments.join(", ")}</span>
+                    </div>
+                  )}
                 </div>
-
-                <div className="flex gap-2">
-                  <Link href={`/?form=${form.code}`} className="flex-1">
-                    <Button className="w-full bg-legal-blue hover:bg-opacity-90 text-white">
-                      <i className="fas fa-edit mr-2"></i>
-                      Fill Form
-                    </Button>
-                  </Link>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => window.open(`https://www.courts.ca.gov/documents/${form.code.toLowerCase()}.pdf`, "_blank")}
-                  >
-                    <i className="fas fa-download"></i>
+                
+                <Link href={`/petition-form?form=${form.code}`}>
+                  <Button className="w-full bg-legal-blue hover:bg-opacity-90 text-white">
+                    Start This Form
                   </Button>
-                </div>
+                </Link>
               </CardContent>
             </Card>
           ))}
         </div>
-
-        {filteredForms.length === 0 && (
-          <div className="text-center py-12">
-            <i className="fas fa-search text-4xl text-gray-400 mb-4"></i>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No forms found</h3>
-            <p className="text-gray-600">Try adjusting your search terms or category filter.</p>
+      ) : (
+        <div className="text-center py-12">
+          <div className="text-gray-400 mb-4">
+            <i className="fas fa-search text-6xl"></i>
           </div>
-        )}
-      </main>
+          <h3 className="text-xl font-medium text-legal-gray mb-2">
+            No forms match "{debouncedSearchTerm}"
+          </h3>
+          <p className="text-legal-gray mb-4">
+            Try adjusting your search terms or category filter
+          </p>
+          {searchSuggestions.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 mb-2">Suggestions:</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {searchSuggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSearchTerm(suggestion)}
+                    className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Form Picker Component */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold text-legal-gray mb-6">Quick Form Selection</h2>
+        <FormPicker 
+          forms={forms || []}
+          onSelect={(code) => setSearchTerm(code)} 
+        />
+      </div>
     </div>
   );
-}
-
-function getCategoryColor(category: string): string {
-  const colors = {
-    family: "bg-legal-green",
-    probate: "bg-legal-purple", 
-    civil: "bg-legal-gray",
-    criminal: "bg-legal-red"
-  };
-  return colors[category as keyof typeof colors] || "bg-legal-blue";
 }

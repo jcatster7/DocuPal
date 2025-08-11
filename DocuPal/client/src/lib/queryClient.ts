@@ -24,12 +24,17 @@ export async function apiRequest(
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
+
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    // Ensure the query key starts with a slash for absolute URLs
+    const url = queryKey.join("/");
+    const fullUrl = url.startsWith("/") ? url : `/${url}`;
+    
+    const res = await fetch(fullUrl, {
       credentials: "include",
     });
 
@@ -47,11 +52,59 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes - forms don't change often
+      gcTime: 10 * 60 * 1000, // 10 minutes - keep in memory longer
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors (client errors)
+        if (error instanceof Error && error.message.includes('4')) {
+          return false;
+        }
+        // Retry up to 2 times for server errors
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
-      retry: false,
+      retry: (failureCount, error) => {
+        // Don't retry mutations on 4xx errors
+        if (error instanceof Error && error.message.includes('4')) {
+          return false;
+        }
+        // Retry up to 1 time for server errors
+        return failureCount < 1;
+      },
+      retryDelay: 1000,
     },
   },
 });
+
+// Prefetch common queries for better UX
+export const prefetchCommonQueries = async () => {
+  // Prefetch petition forms since they're used on the main page
+  await queryClient.prefetchQuery({
+    queryKey: ["/api/petition-forms"],
+    queryFn: async () => {
+      const response = await fetch("/api/petition-forms");
+      if (!response.ok) {
+        throw new Error("Failed to fetch forms");
+      }
+      return response.json();
+    },
+  });
+};
+
+// Utility function for optimistic updates
+export const optimisticUpdate = <T>(
+  queryKey: string[],
+  updater: (oldData: T | undefined) => T
+) => {
+  queryClient.setQueryData(queryKey, updater);
+};
+
+// Utility function for rollback on error
+export const rollbackOptimisticUpdate = <T>(
+  queryKey: string[],
+  previousData: T | undefined
+) => {
+  queryClient.setQueryData(queryKey, previousData);
+};
