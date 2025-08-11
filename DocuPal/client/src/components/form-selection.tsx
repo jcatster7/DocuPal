@@ -41,13 +41,26 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
   const { data: forms, isLoading, error } = useQuery<PetitionForm[]>({
     queryKey: ["/api/petition-forms"],
     queryFn: async () => {
-      const response = await fetch("/api/petition-forms");
-      if (!response.ok) {
-        throw new Error("Failed to fetch forms");
+      try {
+        console.log("Fetching forms from API...");
+        const response = await fetch("/api/petition-forms");
+        console.log("API Response status:", response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch forms: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log("Forms data received:", data);
+        return data;
+      } catch (error) {
+        console.error("Error fetching forms:", error);
+        throw error;
       }
-      return response.json();
     },
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Memoized categories to prevent unnecessary re-renders
@@ -61,12 +74,17 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
 
   // Memoized filtered forms with optimized search logic
   const filteredForms = useMemo(() => {
-    if (!forms) return [];
+    console.log("Filtering forms:", { forms, debouncedSearchTerm, categoryFilter });
+    
+    if (!forms) {
+      console.log("No forms data available");
+      return [];
+    }
     
     const searchLower = debouncedSearchTerm.toLowerCase();
     const hasSearchTerm = searchLower.length > 0;
     
-    return forms.filter(form => {
+    const filtered = forms.filter(form => {
       // Early return if no search term and category matches
       if (!hasSearchTerm) {
         return categoryFilter === "all" || form.category === categoryFilter;
@@ -80,8 +98,13 @@ export default function FormSelection({ selectedForm, onFormSelect, onNext, lang
       
       const matchesCategory = categoryFilter === "all" || form.category === categoryFilter;
       
+      console.log(`Form ${form.code}: search=${matchesSearch}, category=${matchesCategory}`);
+      
       return matchesSearch && matchesCategory;
     });
+    
+    console.log("Filtered forms result:", filtered);
+    return filtered;
   }, [forms, debouncedSearchTerm, categoryFilter]);
 
   // Memoized search suggestions for better UX

@@ -72,34 +72,54 @@ export default function PetitionForm() {
             <div>
               <h3 className="font-semibold legal-gray mb-3">Legal Forms</h3>
               <ul className="text-sm text-gray-600 space-y-2">
-                <li><a href="#" className="hover:legal-blue">Family Law</a></li>
-                <li><a href="#" className="hover:legal-blue">Probate</a></li>
-                <li><a href="#" className="hover:legal-blue">Civil</a></li>
-                <li><a href="#" className="hover:legal-blue">Criminal</a></li>
+                <li><Link href="/library?category=family" className="hover:legal-blue transition-colors">Family Law</Link></li>
+                <li><Link href="/library?category=probate" className="hover:legal-blue transition-colors">Probate</Link></li>
+                <li><Link href="/library?category=civil" className="hover:legal-blue transition-colors">Civil</Link></li>
+                <li><Link href="/library?category=criminal" className="hover:legal-blue transition-colors">Criminal</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold legal-gray mb-3">Resources</h3>
               <ul className="text-sm text-gray-600 space-y-2">
-                <li><a href="#" className="hover:legal-blue">Filing Instructions</a></li>
-                <li><a href="#" className="hover:legal-blue">Court Locations</a></li>
-                <li><a href="#" className="hover:legal-blue">Fee Information</a></li>
-                <li><a href="#" className="hover:legal-blue">Legal Aid</a></li>
+                <li><a href="/resources/filing-instructions" className="hover:legal-blue transition-colors">Filing Instructions</a></li>
+                <li><a href="/resources/court-locations" className="hover:legal-blue transition-colors">Court Locations</a></li>
+                <li><a href="/resources/fee-information" className="hover:legal-blue transition-colors">Fee Information</a></li>
+                <li><a href="/resources/legal-aid" className="hover:legal-blue transition-colors">Legal Aid</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold legal-gray mb-3">Support</h3>
               <ul className="text-sm text-gray-600 space-y-2">
-                <li><a href="#" className="hover:legal-blue">Help Center</a></li>
-                <li><a href="#" className="hover:legal-blue">Contact Us</a></li>
-                <li><a href="#" className="hover:legal-blue">Privacy Policy</a></li>
-                <li><a href="#" className="hover:legal-blue">Terms of Service</a></li>
+                <li><a href="/support/help-center" className="hover:legal-blue transition-colors">Help Center</a></li>
+                <li><a href="/support/contact" className="hover:legal-blue transition-colors">Contact Us</a></li>
+                <li><a href="/support/privacy" className="hover:legal-blue transition-colors">Privacy Policy</a></li>
+                <li><a href="/support/terms" className="hover:legal-blue transition-colors">Terms of Service</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold legal-gray mb-3">About</h3>
-              <p className="text-sm text-gray-600 mb-3">Automated legal document preparation for California courts. Not a substitute for legal advice.</p>
+              <p className="text-sm text-gray-600 mb-3">
+                Empowering Californians with accessible legal document preparation. Our platform streamlines the process of filing court documents while maintaining accuracy and compliance with California judicial standards.
+              </p>
               <p className="text-xs text-gray-500">© 2024 CA Legal Forms. All rights reserved.</p>
+            </div>
+          </div>
+          
+          {/* Additional Footer Links */}
+          <div className="border-t border-gray-200 mt-8 pt-6">
+            <div className="grid md:grid-cols-6 gap-4 text-xs text-gray-500">
+              <a href="/forms/divorce" className="hover:legal-blue transition-colors">Divorce Forms</a>
+              <a href="/forms/custody" className="hover:legal-blue transition-colors">Custody Forms</a>
+              <a href="/forms/probate" className="hover:legal-blue transition-colors">Probate Forms</a>
+              <a href="/forms/small-claims" className="hover:legal-blue transition-colors">Small Claims</a>
+              <a href="/forms/expungement" className="hover:legal-blue transition-colors">Expungement</a>
+              <a href="/forms/guardianship" className="hover:legal-blue transition-colors">Guardianship</a>
+              <a href="/forms/restraining-order" className="hover:legal-blue transition-colors">Restraining Orders</a>
+              <a href="/forms/name-change" className="hover:legal-blue transition-colors">Name Change</a>
+              <a href="/forms/adoption" className="hover:legal-blue transition-colors">Adoption</a>
+              <a href="/forms/estate-planning" className="hover:legal-blue transition-colors">Estate Planning</a>
+              <a href="/forms/landlord-tenant" className="hover:legal-blue transition-colors">Landlord Tenant</a>
+              <a href="/forms/employment" className="hover:legal-blue transition-colors">Employment</a>
             </div>
           </div>
         </div>

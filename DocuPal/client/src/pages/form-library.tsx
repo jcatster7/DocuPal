@@ -31,6 +31,15 @@ export default function FormLibrary() {
   // Debounce search term to avoid excessive filtering
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
+  // Handle category from URL query parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const categoryParam = urlParams.get('category');
+    if (categoryParam && ['family', 'probate', 'civil', 'criminal'].includes(categoryParam)) {
+      setSelectedCategory(categoryParam);
+    }
+  }, []);
+
   const { data: forms, isLoading, error } = useQuery<PetitionForm[]>({
     queryKey: ["/api/petition-forms"],
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
