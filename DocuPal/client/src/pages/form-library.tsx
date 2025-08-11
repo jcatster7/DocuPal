@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import FormPicker from "@/components/form-picker"; // ✅ NEW IMPORT
 import type { PetitionForm } from "@shared/schema";
 
 export default function FormLibrary() {
@@ -85,13 +85,8 @@ export default function FormLibrary() {
         <div className="mb-8">
           <div className="mb-4">
             <div className="relative">
-              <Input
-                type="text"
-                placeholder="Search forms by code, name, or description (e.g., FL-100, divorce, probate)"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+              {/* ✅ Replaced <Input> with FormPicker */}
+              <FormPicker onSelect={(code) => setSearchTerm(code)} />
               <i className="fas fa-search absolute left-3 top-3 text-gray-400"></i>
             </div>
           </div>
